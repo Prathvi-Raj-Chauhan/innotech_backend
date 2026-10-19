@@ -9,10 +9,12 @@ export const getMailerTransporter = async () => {
 
   if (hasCredentials) {
     transporter = nodemailer.createTransport({
-      // host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
       service: 'gmail',
       // port: Number(process.env.SMTP_PORT) || 587,
       // secure: Number(process.env.SMTP_PORT) === 465,
+      port: 465,
+      secure: true,
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS
