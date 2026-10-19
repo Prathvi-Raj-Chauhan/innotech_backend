@@ -3,30 +3,133 @@ import { CatalogItem } from '../models/CatalogItem.js';
 /**
  * AI Recognition Service
  * 
- * Modular service designed for YOLO (YOLOv8/v11) or Vision AI model integration.
- * If an external YOLO API service is reachable via AI_SERVICE_URL, it calls it.
- * Otherwise, it uses heuristic / intelligent catalog matching to prefill device details.
+ * Integrates with the Python FastAPI YOLO E-Waste Photo Detector microservice (POST /predict).
+ * Contract:
+ *  Input:  multipart/form-data with field name "file"
+ *  Output: { is_target: bool, device: { label, confidence, box, area_ratio }, all_detections: [], image_size: [w, h] }
+ *
+ * If AI_SERVICE_URL is set, forwards image to the YOLO model service.
+ * If unreachable or disabled, falls back to intelligent catalog matching.
  */
 export const analyzeDeviceImage = async ({ imageBuffer, filename, mimetype, hintCategory }) => {
-  // If an external YOLO inference server is running, forward to it
-  if (process.env.AI_SERVICE_URL && process.env.ENABLE_EXTERNAL_AI === 'true') {
+  const sampleTitles = {
+    smartphones: 'Smart Device / Mobile Phone',
+    laptops: 'Portable Laptop / Notebook',
+    circuit_boards: 'High-Grade Motherboard / PCB Circuit',
+    monitors: 'Flat-Panel Monitor / TV Display',
+    desktops: 'Desktop Tower & Power Supply Unit',
+    batteries: 'High-Density Lithium-Ion Battery Pack'
+  };
+
+  const sampleSpecs = {
+    smartphones: 'Touchscreen digitizer intact, multi-camera assembly, internal lithium-ion unit',
+    laptops: 'Multi-core SoC, aluminum chassis, motherboard with integrated graphics',
+    circuit_boards: 'Gold-plated connectors, copper heat sinks, SMD electrolytic capacitors',
+    monitors: 'TFT backlight panel, video controller board, plastic/aluminum casing',
+    desktops: 'Steel enclosure, SMPS power supply, ATX board slot, heat spreaders',
+    batteries: 'Li-ion rechargeable chemistry, cobalt/nickel electrode composition'
+  };
+
+  // 1. If external YOLO inference server URL is provided, call it
+  const aiServiceUrl = process.env.AI_SERVICE_URL;
+  if (aiServiceUrl && imageBuffer) {
     try {
-      const response = await fetch(process.env.AI_SERVICE_URL, {
+      const baseUrl = aiServiceUrl.replace(/\/+$/, '');
+      const predictUrl = baseUrl.endsWith('/predict') ? baseUrl : `${baseUrl}/predict`;
+
+      const formData = new FormData();
+      const blob = new Blob([imageBuffer], { type: mimetype || 'image/jpeg' });
+      formData.append('file', blob, filename || 'device_photo.jpg');
+
+      console.log(`[AI Service]: Forwarding image (${imageBuffer.length} bytes) to ${predictUrl}`);
+      const response = await fetch(predictUrl, {
         method: 'POST',
-        headers: { 'Content-Type': mimetype || 'image/jpeg' },
-        body: imageBuffer
+        body: formData
       });
+
       if (response.ok) {
         const yoloResult = await response.json();
-        return yoloResult;
+        console.log('[AI Service]: YOLO Response ->', JSON.stringify(yoloResult));
+
+        // Contract: if is_target is false, report that no mobile, laptop, or TV was found
+        if (!yoloResult.is_target) {
+          return {
+            success: true,
+            isTarget: false,
+            device: null,
+            allDetections: yoloResult.all_detections || [],
+            imageSize: yoloResult.image_size || [0, 0],
+            message: 'No mobile, laptop or TV found in the photo.'
+          };
+        }
+
+        // Target found: map YOLO label to app category
+        const yoloLabel = (yoloResult.device?.label || '').toLowerCase();
+        const categoryMap = {
+          mobile: 'smartphones',
+          'cell phone': 'smartphones',
+          phone: 'smartphones',
+          smartphone: 'smartphones',
+          laptop: 'laptops',
+          notebook: 'laptops',
+          tv: 'monitors',
+          television: 'monitors',
+          monitor: 'monitors',
+          display: 'monitors',
+          desktop: 'desktops',
+          circuit_board: 'circuit_boards',
+          battery: 'batteries'
+        };
+        const detectedCategory = categoryMap[yoloLabel] || 'smartphones';
+
+        const catalogMatch = await CatalogItem.findOne({ category: detectedCategory }) ||
+                              await CatalogItem.findOne();
+
+        const basePriceMin = catalogMatch ? catalogMatch.basePriceMin : 1500;
+        const basePriceMax = catalogMatch ? catalogMatch.basePriceMax : 5000;
+        const payoutTime = catalogMatch ? catalogMatch.estimatedPayoutTime : 'Within 2 hours of pickup';
+        const co2Grams = catalogMatch ? catalogMatch.co2SavingsGrams : 30000;
+
+        return {
+          success: true,
+          isTarget: true,
+          engine: 'Stock YOLO26x Vision Microservice',
+          device: yoloResult.device, // { label, confidence, box: [x1, y1, x2, y2], area_ratio }
+          allDetections: yoloResult.all_detections || [],
+          imageSize: yoloResult.image_size || [0, 0],
+          detectedClass: detectedCategory,
+          itemTitle: sampleTitles[detectedCategory] || `${yoloLabel.toUpperCase()} Device`,
+          confidence: yoloResult.device.confidence,
+          detectedComponents: [
+            'Core PCB / Logic Board',
+            'Display / Chassis Frame',
+            'Internal Lithium-Ion Cell'
+          ],
+          suggestedCondition: 'working',
+          hardwareSpecs: sampleSpecs[detectedCategory] || 'Identified by YOLO photo detector',
+          valuation: {
+            estimatedMin: basePriceMin,
+            estimatedMax: basePriceMax,
+            recommendedInitialOffer: Math.round((basePriceMin + basePriceMax) / 2),
+            estimatedPayoutTime: payoutTime,
+            co2SavingsGrams: co2Grams,
+            carbonPoints: co2Grams
+          },
+          bonusCampaign: catalogMatch?.bonusCampaign || {
+            isActive: true,
+            bonusPercentage: 20,
+            remainingSlots: 42
+          }
+        };
+      } else {
+        console.warn(`[AI Service]: YOLO service returned status ${response.status}: ${await response.text()}`);
       }
     } catch (err) {
-      console.warn('[AI Service]: External YOLO service unreachable, using intelligent detection engine:', err.message);
+      console.warn('[AI Service]: YOLO service call failed, falling back to intelligent detection:', err.message);
     }
   }
 
-  // Intelligent Detection Fallback / Mock Recognition
-  // Matches device categories and estimates recovery value
+  // 2. Intelligent Detection Fallback (heuristic / catalog matching)
   const lowerName = (filename || '').toLowerCase();
   let detectedCategory = hintCategory || 'smartphones';
 
@@ -36,7 +139,7 @@ export const analyzeDeviceImage = async ({ imageBuffer, filename, mimetype, hint
     detectedCategory = 'smartphones';
   } else if (lowerName.includes('board') || lowerName.includes('pcb') || lowerName.includes('motherboard') || lowerName.includes('chip')) {
     detectedCategory = 'circuit_boards';
-  } else if (lowerName.includes('monitor') || lowerName.includes('screen') || lowerName.includes('display')) {
+  } else if (lowerName.includes('monitor') || lowerName.includes('screen') || lowerName.includes('display') || lowerName.includes('tv')) {
     detectedCategory = 'monitors';
   } else if (lowerName.includes('desktop') || lowerName.includes('cpu') || lowerName.includes('tower')) {
     detectedCategory = 'desktops';
@@ -44,7 +147,6 @@ export const analyzeDeviceImage = async ({ imageBuffer, filename, mimetype, hint
     detectedCategory = 'batteries';
   }
 
-  // Fetch catalog item for realistic estimation
   const catalogMatch = await CatalogItem.findOne({ category: detectedCategory }) ||
                         await CatalogItem.findOne();
 
@@ -53,27 +155,18 @@ export const analyzeDeviceImage = async ({ imageBuffer, filename, mimetype, hint
   const payoutTime = catalogMatch ? catalogMatch.estimatedPayoutTime : 'Within 2 hours of pickup';
   const co2Grams = catalogMatch ? catalogMatch.co2SavingsGrams : 30000;
 
-  const sampleTitles = {
-    smartphones: 'Smart Device / Android & iOS Smartphone',
-    laptops: 'Portable Laptop / Ultra-Notebook',
-    circuit_boards: 'High-Grade Motherboard / PCB Circuit',
-    monitors: 'Flat-Panel LCD / LED Display',
-    desktops: 'Desktop Tower & Power Supply Unit',
-    batteries: 'High-Density Lithium-Ion Battery Pack'
-  };
-
-  const sampleSpecs = {
-    smartphones: 'Touchscreen digitizer intact, dual-camera assembly, internal lithium-ion unit',
-    laptops: 'Multi-core SoC, aluminum chassis, motherboard with integrated graphics',
-    circuit_boards: 'Gold-plated connectors, copper heat sinks, SMD electrolytic capacitors',
-    monitors: 'TFT backlight panel, video controller board, plastic/aluminum casing',
-    desktops: 'Steel enclosure, SMPS power supply, ATX board slot, heat spreaders',
-    batteries: 'Li-ion rechargeable chemistry, cobalt/nickel electrode composition'
-  };
-
   return {
     success: true,
-    engine: 'Innotech YOLO-Vision Engine (v1.0 Hook)',
+    isTarget: true,
+    engine: 'Innotech Fallback Heuristic Engine',
+    device: {
+      label: detectedCategory === 'smartphones' ? 'mobile' : (detectedCategory === 'laptops' ? 'laptop' : 'tv'),
+      confidence: 0.94,
+      box: null,
+      area_ratio: 0.45
+    },
+    allDetections: [],
+    imageSize: [640, 640],
     detectedClass: detectedCategory,
     itemTitle: sampleTitles[detectedCategory] || 'Electronic Device',
     confidence: 0.94,
@@ -90,7 +183,7 @@ export const analyzeDeviceImage = async ({ imageBuffer, filename, mimetype, hint
       recommendedInitialOffer: Math.round((basePriceMin + basePriceMax) / 2),
       estimatedPayoutTime: payoutTime,
       co2SavingsGrams: co2Grams,
-      carbonPoints: co2Grams // 1 point = 1g carbon emission reduced
+      carbonPoints: co2Grams
     },
     bonusCampaign: catalogMatch?.bonusCampaign || {
       isActive: true,
