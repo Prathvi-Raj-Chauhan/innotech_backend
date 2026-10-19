@@ -1,5 +1,15 @@
 import mongoose from 'mongoose';
 
+const addressSchema = new mongoose.Schema(
+  {
+    street: { type: String, default: '' },
+    city: { type: String, default: '' },
+    state: { type: String, default: '' },
+    pincode: { type: String, default: '' }
+  },
+  { _id: false }
+);
+
 const userSchema = new mongoose.Schema(
   {
     email: {
@@ -34,12 +44,7 @@ const userSchema = new mongoose.Schema(
     individualProfile: {
       fullName: { type: String, default: '' },
       phone: { type: String, default: '' },
-      defaultAddress: {
-        street: { type: String, default: '' },
-        city: { type: String, default: '' },
-        state: { type: String, default: '' },
-        pincode: { type: String, default: '' }
-      },
+      defaultAddress: { type: addressSchema, default: () => ({}) },
       upiId: { type: String, default: '' }
     },
     // Bulk seller profile (Colleges, IT tech companies, enterprises)
@@ -53,12 +58,7 @@ const userSchema = new mongoose.Schema(
       gstNumber: { type: String, default: '' },
       authorizedPerson: { type: String, default: '' },
       contactPhone: { type: String, default: '' },
-      facilityAddress: {
-        street: { type: String, default: '' },
-        city: { type: String, default: '' },
-        state: { type: String, default: '' },
-        pincode: { type: String, default: '' }
-      }
+      facilityAddress: { type: addressSchema, default: () => ({}) }
     }
   },
   { timestamps: true }

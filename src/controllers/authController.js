@@ -115,9 +115,25 @@ export const verifyOtp = async (req, res) => {
     // If profile data was passed during registration, save it
     if (profileData) {
       if (user.role === 'individual' && profileData.individual) {
-        user.individualProfile = { ...user.individualProfile, ...profileData.individual };
+        const current = user.individualProfile?.toObject ? user.individualProfile.toObject() : (user.individualProfile || {});
+        user.individualProfile = {
+          ...current,
+          ...profileData.individual,
+          defaultAddress: {
+            ...(current.defaultAddress || {}),
+            ...(profileData.individual.defaultAddress || {})
+          }
+        };
       } else if (user.role === 'bulk_institution' && profileData.bulk) {
-        user.bulkProfile = { ...user.bulkProfile, ...profileData.bulk };
+        const current = user.bulkProfile?.toObject ? user.bulkProfile.toObject() : (user.bulkProfile || {});
+        user.bulkProfile = {
+          ...current,
+          ...profileData.bulk,
+          facilityAddress: {
+            ...(current.facilityAddress || {}),
+            ...(profileData.bulk.facilityAddress || {})
+          }
+        };
       }
     }
 
@@ -235,11 +251,27 @@ export const updateProfile = async (req, res) => {
     const { individualProfile, bulkProfile } = req.body;
 
     if (individualProfile && user.role === 'individual') {
-      user.individualProfile = { ...user.individualProfile.toObject(), ...individualProfile };
+      const current = user.individualProfile?.toObject ? user.individualProfile.toObject() : (user.individualProfile || {});
+      user.individualProfile = {
+        ...current,
+        ...individualProfile,
+        defaultAddress: {
+          ...(current.defaultAddress || {}),
+          ...(individualProfile.defaultAddress || {})
+        }
+      };
     }
 
     if (bulkProfile && user.role === 'bulk_institution') {
-      user.bulkProfile = { ...user.bulkProfile.toObject(), ...bulkProfile };
+      const current = user.bulkProfile?.toObject ? user.bulkProfile.toObject() : (user.bulkProfile || {});
+      user.bulkProfile = {
+        ...current,
+        ...bulkProfile,
+        facilityAddress: {
+          ...(current.facilityAddress || {}),
+          ...(bulkProfile.facilityAddress || {})
+        }
+      };
     }
 
     await user.save();
