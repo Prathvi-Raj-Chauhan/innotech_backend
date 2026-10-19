@@ -18,10 +18,21 @@ app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 app.use(morgan('dev'));
 
 // Health check
-app.get('/api/health', (req, res) => {
+// app.get('/api/health', (req, res) => {
+//   res.status(200).json({
+//     status: 'online',
+//     platform: 'Innotech E-Waste Recycling API',
+//     timestamp: new Date().toISOString()
+//   });
+// });
+app.get(['/', '/health', '/api/health'], (req, res) => {
   res.status(200).json({
     status: 'online',
     platform: 'Innotech E-Waste Recycling API',
+    endpoints: {
+      health: '/api/health',
+      baseApi: '/api/v1'
+    },
     timestamp: new Date().toISOString()
   });
 });
