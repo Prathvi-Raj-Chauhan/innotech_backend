@@ -38,7 +38,7 @@ const catalogItemSchema = new mongoose.Schema(
     },
     co2SavingsGrams: {
       type: Number,
-      default: 25000 // default 25,000g = 25kg CO2
+      default: 2200 // default 2,200g = 2.2kg CO2
     },
     materialsRecoverable: [
       {

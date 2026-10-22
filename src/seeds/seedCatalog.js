@@ -14,7 +14,7 @@ const sampleCatalog = [
     basePriceMin: 800,
     basePriceMax: 4500,
     estimatedPayoutTime: 'Instant within 2 hours of pickup',
-    co2SavingsGrams: 28000, // 28kg CO2
+    co2SavingsGrams: 2200, // 2.2kg CO2
     materialsRecoverable: [
       { name: 'Gold (Au)', percentageOrGrams: '0.034g' },
       { name: 'Silver (Ag)', percentageOrGrams: '0.35g' },
@@ -39,7 +39,7 @@ const sampleCatalog = [
     basePriceMin: 2000,
     basePriceMax: 12000,
     estimatedPayoutTime: 'Instant within 2 hours of pickup',
-    co2SavingsGrams: 85000, // 85kg CO2
+    co2SavingsGrams: 18000, // 18kg CO2
     materialsRecoverable: [
       { name: 'Gold (Au)', percentageOrGrams: '0.12g' },
       { name: 'Aluminum (Al)', percentageOrGrams: '650g' },
@@ -64,7 +64,7 @@ const sampleCatalog = [
     basePriceMin: 600,
     basePriceMax: 3500,
     estimatedPayoutTime: 'Within 24 hours of hub assay',
-    co2SavingsGrams: 45000,
+    co2SavingsGrams: 3200, // 3.2kg CO2
     materialsRecoverable: [
       { name: 'Gold Plated Pins', percentageOrGrams: '0.25g' },
       { name: 'High-Purity Copper', percentageOrGrams: '250g' },
@@ -87,7 +87,7 @@ const sampleCatalog = [
     basePriceMin: 500,
     basePriceMax: 2200,
     estimatedPayoutTime: 'Within 24 hours of pickup',
-    co2SavingsGrams: 35000,
+    co2SavingsGrams: 12000, // 12kg CO2
     materialsRecoverable: [
       { name: 'Recycled Polymer Plastics', percentageOrGrams: '1.2kg' },
       { name: 'Internal Copper Wire', percentageOrGrams: '85g' },
@@ -111,7 +111,7 @@ const sampleCatalog = [
     basePriceMin: 1500,
     basePriceMax: 6000,
     estimatedPayoutTime: 'Within 2 hours of pickup',
-    co2SavingsGrams: 95000,
+    co2SavingsGrams: 18000, // 18kg CO2
     materialsRecoverable: [
       { name: 'Structural Steel', percentageOrGrams: '3.5kg' },
       { name: 'Heat Pipe Copper', percentageOrGrams: '350g' },
@@ -134,7 +134,7 @@ const sampleCatalog = [
     basePriceMin: 300,
     basePriceMax: 1500,
     estimatedPayoutTime: 'Instant on verification',
-    co2SavingsGrams: 20000,
+    co2SavingsGrams: 3500, // 3.5kg CO2
     materialsRecoverable: [
       { name: 'Cobalt Metal', percentageOrGrams: '80g' },
       { name: 'Lithium Carbonate', percentageOrGrams: '25g' },

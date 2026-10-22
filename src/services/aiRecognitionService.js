@@ -30,6 +30,15 @@ export const analyzeDeviceImage = async ({ imageBuffer, filename, mimetype, hint
     batteries: 'Li-ion rechargeable chemistry, cobalt/nickel electrode composition'
   };
 
+  const sampleCo2Estimations = {
+    smartphones: 2200,
+    laptops: 18000,
+    circuit_boards: 3200,
+    monitors: 12000,
+    desktops: 18000,
+    batteries: 3500
+  };
+
   // 1. If external YOLO inference server URL is provided, call it
   const aiServiceUrl = process.env.AI_SERVICE_URL;
   if (aiServiceUrl && imageBuffer) {
@@ -88,7 +97,7 @@ export const analyzeDeviceImage = async ({ imageBuffer, filename, mimetype, hint
         const basePriceMin = catalogMatch ? catalogMatch.basePriceMin : 1500;
         const basePriceMax = catalogMatch ? catalogMatch.basePriceMax : 5000;
         const payoutTime = catalogMatch ? catalogMatch.estimatedPayoutTime : 'Within 2 hours of pickup';
-        const co2Grams = catalogMatch ? catalogMatch.co2SavingsGrams : 30000;
+        const co2Grams = catalogMatch ? catalogMatch.co2SavingsGrams : (sampleCo2Estimations[detectedCategory] || 2200);
 
         return {
           success: true,
@@ -153,7 +162,7 @@ export const analyzeDeviceImage = async ({ imageBuffer, filename, mimetype, hint
   const basePriceMin = catalogMatch ? catalogMatch.basePriceMin : 1200;
   const basePriceMax = catalogMatch ? catalogMatch.basePriceMax : 4500;
   const payoutTime = catalogMatch ? catalogMatch.estimatedPayoutTime : 'Within 2 hours of pickup';
-  const co2Grams = catalogMatch ? catalogMatch.co2SavingsGrams : 30000;
+  const co2Grams = catalogMatch ? catalogMatch.co2SavingsGrams : (sampleCo2Estimations[detectedCategory] || 2200);
 
   return {
     success: true,

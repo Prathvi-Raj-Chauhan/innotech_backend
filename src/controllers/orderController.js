@@ -29,7 +29,7 @@ export const createSellOrder = async (req, res) => {
 
     // Check if catalog item has active bonus campaign
     let bonusAmountApplied = 0;
-    let co2Grams = 25000; // default 25kg CO2
+    let co2Grams = 2200; // default ~2.2kg CO2
     let estimatedPayoutTime = 'Within 2 hours of pickup';
 
     if (catalogItemId) {
@@ -216,12 +216,12 @@ export const updateOrderStatus = async (req, res) => {
       carbon.totalCarbonPoints += order.carbonPointsAwarded;
       carbon.totalKgDiverted = parseFloat((carbon.totalCarbonPoints / 1000).toFixed(2));
 
-      // Calculate Tier Badge
-      if (carbon.totalCarbonPoints >= 200000) {
+      // Calculate Tier Badge (normalized for realistic LCA savings)
+      if (carbon.totalCarbonPoints >= 60000) {
         carbon.ecoTierBadge = 'Carbon Neutralizer';
-      } else if (carbon.totalCarbonPoints >= 100000) {
+      } else if (carbon.totalCarbonPoints >= 25000) {
         carbon.ecoTierBadge = 'Planet Champion';
-      } else if (carbon.totalCarbonPoints >= 30000) {
+      } else if (carbon.totalCarbonPoints >= 5000) {
         carbon.ecoTierBadge = 'Eco Guardian';
       }
 
